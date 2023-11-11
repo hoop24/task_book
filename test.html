@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务列表应用</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        #taskList {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #categoryDropdown, #reminderInput {
+            width: 70%;
+            padding: 8px;
+            margin-bottom: 8px;
+        }
+
+        #addTaskBtn {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        .taskItem {
+            margin-bottom: 8px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid transparent;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .taskItem button {
+            cursor: pointer;
+            background-color: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        .completed {
+            text-decoration: line-through;
+            color: #aaa;
+        }
+
+        #taskStats {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .taskItem[data-category="work"] {
+          border-left-color: #3498db; /* 工作类别颜色 */
+          transition: background-color 0.3s, transform 0.3s;
+      }
+      .taskItem[data-category="personal"] {
+        border-left-color: #e74c3c; /* 个人类别颜色 */
+    }
+
+    .taskItem[data-category="study"] {
+        border-left-color: #2ecc71; /* 学习类别颜色 */
+    }
+    .taskItem:hover {
+      background-color: #ecf0f1; /* 鼠标悬停时的背景色 */
+      transform: scale(1.02); /* 鼠标悬停时稍微放大 */
+      background-color: #c0392b;
+  }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div id="taskList">
+    <h2>任务列表</h2>
+    <div>
+        <input type="text" id="newTaskInput" placeholder="添加新任务">
+        <select id="categoryDropdown">
+            <option value="all">所有类别</option>
+            <option value="work">工作</option>
+            <option value="personal">个人</option>
+            <option value="study">学习</option>
+        </select>
+        <label for="reminderInput">提醒时间：</label>
+        <input type="datetime-local" id="reminderInput">
+        <button id="addTaskBtn" onclick="addTask()">添加任务</button>
+    </div>
+    <div id="tasks"></div>
+</div>
+
+<div id="taskStats">
+    <h2>任务统计</h2>
+    <canvas id="completionChart" width="400" height="300"></canvas>
+    <canvas id="busiestTimeChart" width="400" height="300"></canvas>
+</div>
+
+<script>
+    let taskData = [];
+
+    function addTask() {
+        const inputElement = document.getElementById('newTaskInput');
+        const categoryElement = document.getElementById('categoryDropdown');
+        const reminderElement = document.getElementById('reminderInput');
+        const taskText = inputElement.value;
+        const category = categoryElement.value;
+        const reminderTime = reminderElement.value;
+
+        if (taskText.trim() === '') {
+            alert('请输入任务内容！');
+            return;
+        }
+
+        const tasksContainer = document.getElementById('tasks');
+
+        const taskItem = document.createElement('div');
+        taskItem.className = 'taskItem';
+        taskItem.setAttribute('data-category', category);
+        taskItem.setAttribute('data-reminder', reminderTime);
+
+        const taskTextElement = document.createElement('span');
+        taskTextElement.innerText = taskText;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerText = '删除';
+        deleteBtn.onclick = function () {
+            tasksContainer.removeChild(taskItem);
+            removeTask();
+        };
+
+        const completeBtn = document.createElement('button');
+        completeBtn.innerText = '完成';
+        completeBtn.onclick = function () {
+            taskTextElement.classList.toggle('completed');
+            completeTask();
+        };
+
+        taskItem.appendChild(taskTextElement);
+        taskItem.appendChild(deleteBtn);
+        taskItem.appendChild(completeBtn);
+
+        tasksContainer.appendChild(taskItem);
+
+        if (reminderTime) {
+            setReminder(taskText, reminderTime);
+        }
+
+        updateTaskStats();
+
+        inputElement.value = '';
+        reminderElement.value = '';
+    }
+
+    function removeTask() {
+        updateTaskStats();
+    }
+
+    function completeTask() {
+        updateTaskStats();
+    }
+
+    function setReminder(taskText, reminderTime) {
+        const now = new Date().getTime();
+        const reminderTimestamp = new Date(reminderTime).getTime();
+
+        const timeDifference = reminderTimestamp - now;
+
+        if (timeDifference > 0) {
+            setTimeout(function () {
+                showNotification(taskText);
+            }, timeDifference);
+        }
+    }
+
+    function showNotification(taskText) {
+        if (Notification.permission === 'granted') {
+            new Notification('任务提醒', {
+                body: taskText,
+                icon: 'path/to/icon.png'
+            });
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(function (permission) {
+                if (permission === 'granted') {
+                    new Notification('任务提醒', {
+                        body: taskText,
+                        icon: 'path/to/icon.png'
+                    });
+                }
+            });
+        }
+    }
+
+    function updateTaskStats() {
+        const taskItems = document.querySelectorAll('.taskItem');
+        const completionData = { completed: 0, incomplete: 0 };
+        const busiestTimeData = {};
+
+        taskItems.forEach(function (item) {
+            const isCompleted = item.querySelector('span').classList.contains('completed');
+            const category = item.getAttribute('data-category');
+            const reminderTime = item.getAttribute('data-reminder');
+
+            if (isCompleted) {
+                completionData.completed += 1;
+            } else {
+                completionData.incomplete += 1;
+            }
+
+            if (reminderTime) {
+                const reminderHour = new Date(reminderTime).getHours();
+
+                if (!busiestTimeData[reminderHour]) {
+                    busiestTimeData[reminderHour] = 1;
+                } else {
+                    busiestTimeData[reminderHour] += 1;
+                }
+            }
+        });
+
+        taskData = [completionData.completed, completionData.incomplete];
+        updateCompletionChart();
+
+        const busiestTimeLabels = Object.keys(busiestTimeData);
+        const busiestTimeValues = Object.values(busiestTimeData);
+        updateBusiestTimeChart(busiestTimeLabels, busiestTimeValues);
+    }
+
+    function updateCompletionChart() {
+        const ctx = document.getElementById('completionChart').getContext('2d');
+        const completionChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['已完成', '未完成'],
+                datasets: [{
+                    data: taskData,
+                    backgroundColor: ['#36a2eb', '#ff6384'],
+                }]
+            },
+        });
+    }
+
+    function updateBusiestTimeChart(labels, values) {
+        const ctx = document.getElementById('busiestTimeChart').getContext('2d');
+        const busiestTimeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '最繁忙时段',
+                    data: values,
+                    backgroundColor: '#4caf50',
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                    },
+                },
+            },
+        });
+    }
+
+    // 在初始化时更新统计信息
+    updateTaskStats();
+</script>
+
+</body>
+</html>
