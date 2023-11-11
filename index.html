@@ -211,21 +211,21 @@
         const taskItems = document.querySelectorAll('.taskItem');
         const completionData = { completed: 0, incomplete: 0 };
         const busiestTimeData = {};
-
+    
         taskItems.forEach(function (item) {
             const isCompleted = item.querySelector('span').classList.contains('completed');
             const category = item.getAttribute('data-category');
             const reminderTime = item.getAttribute('data-reminder');
-
+    
             if (isCompleted) {
                 completionData.completed += 1;
             } else {
                 completionData.incomplete += 1;
             }
-
+    
             if (reminderTime) {
                 const reminderHour = new Date(reminderTime).getHours();
-
+    
                 if (!busiestTimeData[reminderHour]) {
                     busiestTimeData[reminderHour] = 1;
                 } else {
@@ -233,10 +233,15 @@
                 }
             }
         });
-
+    
         taskData = [completionData.completed, completionData.incomplete];
+        
+        if (window.completionChart) {
+            window.completionChart.destroy();
+        }
+    
         updateCompletionChart();
-
+    
         const busiestTimeLabels = Object.keys(busiestTimeData);
         const busiestTimeValues = Object.values(busiestTimeData);
         updateBusiestTimeChart(busiestTimeLabels, busiestTimeValues);
