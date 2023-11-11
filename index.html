@@ -249,7 +249,13 @@
 
     function updateCompletionChart() {
         const ctx = document.getElementById('completionChart').getContext('2d');
-        const completionChart = new Chart(ctx, {
+        
+        // 检查是否存在之前的图表实例，如果存在则销毁
+        if (window.completionChart) {
+            window.completionChart.destroy();
+        }
+    
+        window.completionChart = new Chart(ctx, {
             type: 'pie',
             data: {
                 labels: ['已完成', '未完成'],
